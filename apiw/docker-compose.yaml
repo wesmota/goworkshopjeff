@@ -1,0 +1,85 @@
+version: '3.5'
+ 
+services:
+  apis3produto:
+    image: jeffotoni/apis3produto
+    container_name: apis3produto
+    hostname: apis3produto
+    domainname: apis3produto.local.com
+    environment:
+       - "TZ=America/Sao_Paulo"
+       - "API_ENV=prod"
+    networks:
+        apis3produtocomposer:
+           aliases:
+              - apis3produto.local.com
+    ports:
+       - 8081:8081
+       - 6010:6010
+    env_file:
+       - ./apis3produto_env.env
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:v2.7.1
+    container_name: prometheus
+    #hostname: prometheus
+    command:
+      - '--storage.tsdb.path=/var/lib/prometheus/'
+      - '--storage.tsdb.retention=180d'
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - /data/volumes/prometheus:/var/lib/prometheus
+    networks:
+      - apis3produtocomposer
+    ports:
+      - 9090:9090
+    environment:
+      - "TZ=America/Sao_Paulo"
+
+
+  postgres:
+    image: postgres
+    container_name: postgres
+    volumes:
+      - /pgdata:/var/lib/postgresql/data
+      - ./sql:/tmp
+    networks:
+       apis3produtocomposer:
+          aliases:
+            - postgres.local.com
+    ports:
+      - 5432:5432
+    environment:
+      - "TZ=America/Sao_Paulo"
+      - "POSTGRES_PASSWORD=12345"
+
+  rabbit1:
+    image: "rabbitmq:3-management"
+    #hostname: "rabbit1"
+    container_name: "rabbit1"
+    environment:
+        RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+        RABBITMQ_DEFAULT_USER: "rabbitmq"
+        RABBITMQ_DEFAULT_PASS: "rabbitmq"
+        RABBITMQ_DEFAULT_VHOST: "/"
+    networks:
+       apis3produtocomposer:
+          aliases:
+            - rabbit1.local.com
+    ports:
+      - "8282:15672"
+      - "5672:5672"
+      - "25676:25676"
+    labels:
+        NAME: "rabbitmq1"
+    volumes:
+      - "./enabled_plugins:/etc/rabbitmq/enabled_plugins"
+    #- "./rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro"
+    #- "./autocluster-0.4.1.ez:/usr/lib/rabbitmq/lib/rabbitmq_server-3.5.5/plugins/autocluster-0.4.1.ez"
+    environment:
+      - "TZ=America/Sao_Paulo"
+networks:
+  apis3produtocomposer: 
+      driver: bridge
